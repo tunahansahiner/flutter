@@ -30,6 +30,10 @@ class MockPlatformViewAndroidJNI : public PlatformViewAndroidJNI {
                std::vector<std::vector<uint8_t>> string_attribute_args),
               (override));
   MOCK_METHOD(void,
+              FlutterViewSetApplicationLocale,
+              (const std::string locale),
+              (override));
+  MOCK_METHOD(void,
               FlutterViewUpdateCustomAccessibilityActions,
               (std::vector<uint8_t> actions_buffer,
                std::vector<std::string> strings),
@@ -201,7 +205,8 @@ TEST(AndroidShellHolder, CreateWithMergedPlatformAndUIThread) {
 
 TEST(AndroidShellHolder, CreateWithUnMergedPlatformAndUIThread) {
   Settings settings;
-  settings.merged_platform_ui_thread = false;
+  settings.merged_platform_ui_thread =
+      Settings::MergedPlatformUIThread::kDisabled;
   auto jni = std::make_shared<MockPlatformViewAndroidJNI>();
   auto holder = std::make_unique<AndroidShellHolder>(
       settings, jni, AndroidRenderingAPI::kImpellerOpenGLES);

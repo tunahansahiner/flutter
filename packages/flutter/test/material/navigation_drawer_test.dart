@@ -130,7 +130,11 @@ void main() {
     await tester.pump();
 
     // A Material is added with the custom color.
+<<<<<<< HEAD
     expect(findDestinationInk('Alarm'), findsOne);
+=======
+    expect(findDestinationInk('Alarm'), findsNWidgets(2));
+>>>>>>> f6ff1529fd6d8af5f706051d9251ac9231c83407
     final BoxDecoration destinationDecoration =
         tester.firstWidget<Ink>(findDestinationInk('Alarm')).decoration! as BoxDecoration;
     expect(destinationDecoration.color, color);
@@ -486,6 +490,46 @@ void main() {
 
     await tester.pumpAndSettle();
   });
+
+  testWidgets('NavigationDrawer can display header and footer', (WidgetTester tester) async {
+    final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+    widgetSetup(tester, 3000, viewHeight: 3000);
+    final Widget widget = _buildWidget(
+      scaffoldKey,
+      NavigationDrawer(
+        header: const DrawerHeader(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 8,
+              children: <Widget>[FlutterLogo(), Text('Header')],
+            ),
+          ),
+        ),
+        footer: ListTile(
+          leading: const FlutterLogo(),
+          title: const Text('Footer'),
+          trailing: const Icon(Icons.settings),
+          onTap: () {},
+        ),
+        children: <Widget>[
+          for (int i = 0; i < 10; i++)
+            NavigationDrawerDestination(icon: const Icon(Icons.home), label: Text('Item $i')),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(widget);
+    scaffoldKey.currentState!.openDrawer();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(DrawerHeader), findsOneWidget);
+    expect(find.text('Header'), findsOneWidget);
+    expect(find.byType(FlutterLogo), findsNWidgets(2));
+    expect(find.byType(ListTile), findsOneWidget);
+    expect(find.text('Footer'), findsOneWidget);
+    expect(find.byIcon(Icons.settings), findsOneWidget);
+  });
 }
 
 Widget _buildWidget(GlobalKey<ScaffoldState> scaffoldKey, Widget child, {bool? useMaterial3}) {
@@ -509,8 +553,13 @@ InkWell? _getInkWell(WidgetTester tester) {
 
 ShapeDecoration? _getIndicatorDecoration(WidgetTester tester) {
   return tester
+<<<<<<< HEAD
           .firstWidget<Container>(
             find.descendant(of: find.byType(FadeTransition), matching: find.byType(Container)),
+=======
+          .firstWidget<Ink>(
+            find.descendant(of: find.byType(NavigationIndicator), matching: find.byType(Ink)),
+>>>>>>> f6ff1529fd6d8af5f706051d9251ac9231c83407
           )
           .decoration
       as ShapeDecoration?;

@@ -179,27 +179,25 @@ void main() {
     );
 
     TextStyle textStyle;
-    textStyle =
-        tester
-            .widget<DefaultTextStyle>(
-              find.descendant(
-                of: find.widgetWithText(TextButton, 'First child'),
-                matching: find.byType(DefaultTextStyle),
-              ),
-            )
-            .style;
+    textStyle = tester
+        .widget<DefaultTextStyle>(
+          find.descendant(
+            of: find.widgetWithText(TextButton, 'First child'),
+            matching: find.byType(DefaultTextStyle),
+          ),
+        )
+        .style;
     expect(textStyle.fontFamily, theme.textTheme.bodyMedium!.fontFamily);
     expect(textStyle.decoration, theme.textTheme.bodyMedium!.decoration);
 
-    textStyle =
-        tester
-            .widget<DefaultTextStyle>(
-              find.descendant(
-                of: find.widgetWithText(TextButton, 'Second child'),
-                matching: find.byType(DefaultTextStyle),
-              ),
-            )
-            .style;
+    textStyle = tester
+        .widget<DefaultTextStyle>(
+          find.descendant(
+            of: find.widgetWithText(TextButton, 'Second child'),
+            matching: find.byType(DefaultTextStyle),
+          ),
+        )
+        .style;
     expect(textStyle.fontFamily, theme.textTheme.bodyMedium!.fontFamily);
     expect(textStyle.decoration, theme.textTheme.bodyMedium!.decoration);
   });
@@ -221,28 +219,26 @@ void main() {
     );
 
     TextStyle textStyle;
-    textStyle =
-        tester
-            .widget<DefaultTextStyle>(
-              find.descendant(
-                of: find.widgetWithText(TextButton, 'First child'),
-                matching: find.byType(DefaultTextStyle),
-              ),
-            )
-            .style;
+    textStyle = tester
+        .widget<DefaultTextStyle>(
+          find.descendant(
+            of: find.widgetWithText(TextButton, 'First child'),
+            matching: find.byType(DefaultTextStyle),
+          ),
+        )
+        .style;
     expect(textStyle.textBaseline, TextBaseline.ideographic);
     expect(textStyle.fontSize, 20.0);
     expect(textStyle.color, isNot(Colors.orange));
 
-    textStyle =
-        tester
-            .widget<DefaultTextStyle>(
-              find.descendant(
-                of: find.widgetWithText(TextButton, 'Second child'),
-                matching: find.byType(DefaultTextStyle),
-              ),
-            )
-            .style;
+    textStyle = tester
+        .widget<DefaultTextStyle>(
+          find.descendant(
+            of: find.widgetWithText(TextButton, 'Second child'),
+            matching: find.byType(DefaultTextStyle),
+          ),
+        )
+        .style;
     expect(textStyle.textBaseline, TextBaseline.ideographic);
     expect(textStyle.fontSize, 20.0);
     expect(textStyle.color, isNot(Colors.orange));
@@ -333,10 +329,9 @@ void main() {
 
     IconTheme iconTheme(IconData icon) {
       return tester.widget(
-        find.descendant(
-          of: find.widgetWithIcon(TextButton, icon),
-          matching: find.byType(IconTheme),
-        ),
+        find
+            .descendant(of: find.widgetWithIcon(TextButton, icon), matching: find.byType(IconTheme))
+            .last,
       );
     }
 
@@ -405,10 +400,9 @@ void main() {
 
     IconTheme iconTheme(IconData icon) {
       return tester.widget(
-        find.descendant(
-          of: find.widgetWithIcon(TextButton, icon),
-          matching: find.byType(IconTheme),
-        ),
+        find
+            .descendant(of: find.widgetWithIcon(TextButton, icon), matching: find.byType(IconTheme))
+            .last,
       );
     }
 
@@ -557,7 +551,7 @@ void main() {
     expect(material.type, MaterialType.button);
   });
 
-  testWidgets('Custom button fillColor - Non MaterialState', (WidgetTester tester) async {
+  testWidgets('Custom button fillColor - Non WidgetState', (WidgetTester tester) async {
     Material buttonColor(String text) {
       return tester.widget<Material>(
         find.descendant(of: find.byType(TextButton), matching: find.widgetWithText(Material, text)),
@@ -599,7 +593,7 @@ void main() {
     expect(buttonColor('Second child').color, theme.colorScheme.surface.withOpacity(0.0));
   });
 
-  testWidgets('Custom button fillColor - MaterialState', (WidgetTester tester) async {
+  testWidgets('Custom button fillColor - WidgetState', (WidgetTester tester) async {
     Material buttonColor(String text) {
       return tester.widget<Material>(
         find.descendant(of: find.byType(TextButton), matching: find.widgetWithText(Material, text)),
@@ -609,8 +603,8 @@ void main() {
     const Color selectedFillColor = Colors.orange;
     const Color defaultFillColor = Colors.blue;
 
-    Color getFillColor(Set<MaterialState> states) {
-      if (states.contains(MaterialState.selected)) {
+    Color getFillColor(Set<WidgetState> states) {
+      if (states.contains(WidgetState.selected)) {
         return selectedFillColor;
       }
       return defaultFillColor;
@@ -619,7 +613,7 @@ void main() {
     await tester.pumpWidget(
       boilerplate(
         child: ToggleButtons(
-          fillColor: MaterialStateColor.resolveWith(getFillColor),
+          fillColor: WidgetStateColor.resolveWith(getFillColor),
           isSelected: const <bool>[false, true],
           onPressed: (int index) {},
           children: const <Widget>[Text('First child'), Text('Second child')],
@@ -636,7 +630,7 @@ void main() {
     await tester.pumpWidget(
       boilerplate(
         child: ToggleButtons(
-          fillColor: MaterialStateColor.resolveWith(getFillColor),
+          fillColor: WidgetStateColor.resolveWith(getFillColor),
           isSelected: const <bool>[false, true],
           children: const <Widget>[Text('First child'), Text('Second child')],
         ),
@@ -1003,10 +997,9 @@ void main() {
       ),
     );
 
-    final List<Widget> toggleButtons =
-        tester.allWidgets.where((Widget widget) {
-          return widget.runtimeType.toString() == '_SelectToggleButton';
-        }).toList();
+    final List<Widget> toggleButtons = tester.allWidgets.where((Widget widget) {
+      return widget.runtimeType.toString() == '_SelectToggleButton';
+    }).toList();
 
     for (int i = 0; i < toggleButtons.length; i++) {
       final Rect rect = tester.getRect(find.byWidget(toggleButtons[i]));
@@ -1030,10 +1023,9 @@ void main() {
     );
 
     List<Widget> toggleButtons;
-    toggleButtons =
-        tester.allWidgets.where((Widget widget) {
-          return widget.runtimeType.toString() == '_SelectToggleButton';
-        }).toList();
+    toggleButtons = tester.allWidgets.where((Widget widget) {
+      return widget.runtimeType.toString() == '_SelectToggleButton';
+    }).toList();
 
     for (int i = 0; i < toggleButtons.length; i++) {
       final Rect rect = tester.getRect(find.byWidget(toggleButtons[i]));
@@ -1066,10 +1058,9 @@ void main() {
       ),
     );
 
-    toggleButtons =
-        tester.allWidgets.where((Widget widget) {
-          return widget.runtimeType.toString() == '_SelectToggleButton';
-        }).toList();
+    toggleButtons = tester.allWidgets.where((Widget widget) {
+      return widget.runtimeType.toString() == '_SelectToggleButton';
+    }).toList();
 
     // Only the last button paints both leading and trailing borders.
     // Other buttons only paint the leading border.
@@ -1237,13 +1228,12 @@ void main() {
       ),
     );
 
-    final List<RenderObject> toggleButtonRenderObject =
-        tester.allRenderObjects
-            .where((RenderObject object) {
-              return object.runtimeType.toString() == '_SelectToggleButtonRenderObject';
-            })
-            .toSet()
-            .toList();
+    final List<RenderObject> toggleButtonRenderObject = tester.allRenderObjects
+        .where((RenderObject object) {
+          return object.runtimeType.toString() == '_SelectToggleButtonRenderObject';
+        })
+        .toSet()
+        .toList();
 
     // The first button paints the leading, top and bottom sides with a path
     expect(
@@ -1327,13 +1317,12 @@ void main() {
       expect(tester.getCenter(find.text('Second child')), const Offset(400.0, 300.0));
       expect(tester.getCenter(find.text('Third child')), const Offset(400.0, 349.0));
 
-      final List<RenderObject> toggleButtonRenderObject =
-          tester.allRenderObjects
-              .where((RenderObject object) {
-                return object.runtimeType.toString() == '_SelectToggleButtonRenderObject';
-              })
-              .toSet()
-              .toList();
+      final List<RenderObject> toggleButtonRenderObject = tester.allRenderObjects
+          .where((RenderObject object) {
+            return object.runtimeType.toString() == '_SelectToggleButtonRenderObject';
+          })
+          .toSet()
+          .toList();
 
       // The first button paints the left, top and right sides with a path.
       expect(
@@ -1556,13 +1545,12 @@ void main() {
     // The only button should be laid out at the center of the screen.
     expect(tester.getCenter(find.text('First child')), const Offset(400.0, 300.0));
 
-    final List<RenderObject> toggleButtonRenderObject =
-        tester.allRenderObjects
-            .where((RenderObject object) {
-              return object.runtimeType.toString() == '_SelectToggleButtonRenderObject';
-            })
-            .toSet()
-            .toList();
+    final List<RenderObject> toggleButtonRenderObject = tester.allRenderObjects
+        .where((RenderObject object) {
+          return object.runtimeType.toString() == '_SelectToggleButtonRenderObject';
+        })
+        .toSet()
+        .toList();
 
     // The first button paints the left, top and right sides with a path.
     expect(
@@ -1604,13 +1592,12 @@ void main() {
     // The only button should be laid out at the center of the screen.
     expect(tester.getCenter(find.text('First child')), const Offset(400.0, 300.0));
 
-    final List<RenderObject> toggleButtonRenderObject =
-        tester.allRenderObjects
-            .where((RenderObject object) {
-              return object.runtimeType.toString() == '_SelectToggleButtonRenderObject';
-            })
-            .toSet()
-            .toList();
+    final List<RenderObject> toggleButtonRenderObject = tester.allRenderObjects
+        .where((RenderObject object) {
+          return object.runtimeType.toString() == '_SelectToggleButtonRenderObject';
+        })
+        .toSet()
+        .toList();
 
     // The first button paints the left, top and right sides with a path.
     expect(
@@ -1704,11 +1691,10 @@ void main() {
       children: const <Widget>[Text('First child'), Text('Second child'), Text('Third child')],
     ).debugFillProperties(builder);
 
-    final List<String> description =
-        builder.properties
-            .where((DiagnosticsNode node) => !node.isFiltered(DiagnosticLevel.info))
-            .map((DiagnosticsNode node) => node.toString())
-            .toList();
+    final List<String> description = builder.properties
+        .where((DiagnosticsNode node) => !node.isFiltered(DiagnosticLevel.info))
+        .map((DiagnosticsNode node) => node.toString())
+        .toList();
 
     expect(description, <String>[
       'Buttons are enabled',

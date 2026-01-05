@@ -154,7 +154,12 @@ class _SliverEnsureSemanticsExampleState extends State<SliverEnsureSemanticsExam
               ),
             ),
             SliverEnsureSemantics(
+<<<<<<< HEAD
               sliver: SliverSemanticsList(
+=======
+              sliver: SliverSemantics(
+                role: SemanticsRole.list,
+>>>>>>> f6ff1529fd6d8af5f706051d9251ac9231c83407
                 sliver: SliverFixedExtentList(
                   itemExtent: 44.0,
                   delegate: SliverChildBuilderDelegate(
@@ -189,6 +194,7 @@ class _SliverEnsureSemanticsExampleState extends State<SliverEnsureSemanticsExam
     );
   }
 }
+<<<<<<< HEAD
 
 // A sliver that assigns the role of SemanticsRole.list to its sliver child.
 class SliverSemanticsList extends SingleChildRenderObjectWidget {
@@ -205,3 +211,5 @@ class RenderSliverSemanticsList extends RenderProxySliver {
     config.role = SemanticsRole.list;
   }
 }
+=======
+>>>>>>> f6ff1529fd6d8af5f706051d9251ac9231c83407

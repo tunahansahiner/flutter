@@ -6,11 +6,11 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'widget_preview_scaffold_test_utils.dart';
+import 'widget_preview_scaffold_change_detector.dart';
 
 void main() {
   test('Widget Preview Scaffold template change detection', () {
-    if (WidgetPreviewScaffoldTestUtils.checkForTemplateUpdates(
+    if (WidgetPreviewScaffoldChangeDetector.checkForTemplateUpdates(
       widgetPreviewScaffoldProject: Directory(
         Platform.script.resolve('.').path,
       ),
@@ -20,7 +20,7 @@ void main() {
     )) {
       stdout.writeln(
         'The widget_preview_scaffold contents do not match the widget_preview_scaffold '
-        'templates. Run "dart test/widget_preview_scaffold.shard/update_widget_preview_scaffold" '
+        'templates. Run "dart test/widget_preview_scaffold.shard/update_widget_preview_scaffold.dart" '
         'to update widget_preview_scaffold with the latest template contents.',
       );
       fail(

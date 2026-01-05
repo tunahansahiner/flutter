@@ -14,6 +14,7 @@ import '../base/io.dart';
 import '../base/logger.dart';
 import '../base/platform.dart';
 import '../base/process.dart';
+import '../base/utils.dart';
 import '../base/version.dart';
 import '../build_info.dart';
 import '../cache.dart';
@@ -161,8 +162,9 @@ class XCDevice {
       if (result.exitCode == 0) {
         final String listOutput = result.stdout;
         try {
-          final List<Object> listResults =
-              (json.decode(result.stdout) as List<Object?>).whereType<Object>().toList();
+          final List<Object> listResults = (json.decode(result.stdout) as List<Object?>)
+              .whereType<Object>()
+              .toList();
           _cachedListResults = listResults;
           return listResults;
         } on FormatException {
@@ -196,7 +198,7 @@ class XCDevice {
   // Attach: d83d5bc53967baa0ee18626ba87b6254b2ab5418
   // Attach: 00008027-00192736010F802E
   // Detach: d83d5bc53967baa0ee18626ba87b6254b2ab5418
-  final RegExp _observationIdentifierPattern = RegExp(r'^(\w*): ([\w-]*)$');
+  final _observationIdentifierPattern = RegExp(r'^(\w*): ([\w-]*)$');
 
   Future<void> _startObservingTetheredIOSDevices() async {
     try {
@@ -278,21 +280,19 @@ class XCDevice {
     final Process process = await _processUtils.start(cmd);
 
     final StreamSubscription<String> stdoutSubscription = process.stdout
-        .transform<String>(utf8.decoder)
-        .transform<String>(const LineSplitter())
+        .transform(utf8LineDecoder)
         .listen((String line) {
           String? mappedLine = line;
           if (mapFunction != null) {
             mappedLine = mapFunction(line);
           }
           if (mappedLine != null) {
-            final String message = '$prefix$mappedLine';
+            final message = '$prefix$mappedLine';
             _logger.printTrace(message);
           }
         });
     final StreamSubscription<String> stderrSubscription = process.stderr
-        .transform<String>(utf8.decoder)
-        .transform<String>(const LineSplitter())
+        .transform(utf8LineDecoder)
         .listen((String line) {
           String? mappedLine = line;
           if (mapFunction != null) {
@@ -376,14 +376,12 @@ class XCDevice {
         _usbDeviceWaitProcess?.kill();
       });
 
-      final Future<void> allProcessesExited = Future.wait(<Future<void>>[
-        usbProcessExited,
-        wifiProcessExited,
-      ]).whenComplete(() async {
-        _usbDeviceWaitProcess = null;
-        _wifiDeviceWaitProcess = null;
-        await waitStreamController?.close();
-      });
+      final Future<void> allProcessesExited =
+          Future.wait(<Future<void>>[usbProcessExited, wifiProcessExited]).whenComplete(() async {
+            _usbDeviceWaitProcess = null;
+            _wifiDeviceWaitProcess = null;
+            await waitStreamController?.close();
+          });
 
       return await Future.any(<Future<XCDeviceEventNotification?>>[
         allProcessesExited.then((_) => null),
@@ -451,10 +449,10 @@ class XCDevice {
       return const <IOSDevice>[];
     }
 
-    final Map<String, IOSCoreDevice> coreDeviceMap = <String, IOSCoreDevice>{};
+    final coreDeviceMap = <String, IOSCoreDevice>{};
     if (_xcode.isDevicectlInstalled) {
       final List<IOSCoreDevice> coreDevices = await _coreDeviceControl.getCoreDevices();
-      for (final IOSCoreDevice device in coreDevices) {
+      for (final device in coreDevices) {
         if (device.udid == null) {
           continue;
         }
@@ -499,21 +497,21 @@ class XCDevice {
     //  },
     // ...
 
-    final Map<String, IOSDevice> deviceMap = <String, IOSDevice>{};
+    final deviceMap = <String, IOSDevice>{};
     for (final Object device in allAvailableDevices) {
       if (device is Map<String, Object?>) {
         // Only include iPhone, iPad, iPod, or other iOS devices.
         if (!_isIPhoneOSDevice(device)) {
           continue;
         }
-        final String? identifier = device['identifier'] as String?;
-        final String? name = device['name'] as String?;
+        final identifier = device['identifier'] as String?;
+        final name = device['name'] as String?;
         if (identifier == null || name == null) {
           continue;
         }
-        bool devModeEnabled = true;
-        bool isConnected = true;
-        bool isPaired = true;
+        var devModeEnabled = true;
+        var isConnected = true;
+        var isPaired = true;
         final Map<String, Object?>? errorProperties = _errorProperties(device);
         if (errorProperties != null) {
           final String? errorMessage = _parseErrorMessage(errorProperties);
@@ -603,9 +601,17 @@ class XCDevice {
           iProxy: _iProxy,
           fileSystem: globals.fs,
           logger: _logger,
+          analytics: globals.analytics,
           iosDeploy: _iosDeploy,
           iMobileDevice: _iMobileDevice,
           coreDeviceControl: _coreDeviceControl,
+          coreDeviceLauncher: IOSCoreDeviceLauncher(
+            coreDeviceControl: _coreDeviceControl,
+            logger: _logger,
+            xcodeDebug: _xcodeDebug,
+            fileSystem: globals.fs,
+            processUtils: _processUtils,
+          ),
           xcodeDebug: _xcodeDebug,
           platform: globals.platform,
           devModeEnabled: devModeEnabled,
@@ -657,7 +663,7 @@ class XCDevice {
     if (operatingSystemVersion is String) {
       // Parse out the OS version, ignore the build number in parentheses.
       // "13.3 (17C54)"
-      final RegExp operatingSystemRegex = RegExp(r'(.*) \(.*\)$');
+      final operatingSystemRegex = RegExp(r'(.*) \(.*\)$');
       if (operatingSystemRegex.hasMatch(operatingSystemVersion.trim())) {
         return operatingSystemRegex.firstMatch(operatingSystemVersion.trim())?.group(1);
       }
@@ -670,7 +676,7 @@ class XCDevice {
     final Object? operatingSystemVersion = deviceProperties['operatingSystemVersion'];
     if (operatingSystemVersion is String) {
       // Parse out the build version, for example 17C54 from "13.3 (17C54)".
-      final RegExp buildVersionRegex = RegExp(r'\(.*\)$');
+      final buildVersionRegex = RegExp(r'\(.*\)$');
       return buildVersionRegex
           .firstMatch(operatingSystemVersion)
           ?.group(0)
@@ -758,7 +764,7 @@ class XCDevice {
       return null;
     }
 
-    final StringBuffer errorMessage = StringBuffer('Error: ');
+    final errorMessage = StringBuffer('Error: ');
 
     final Object? description = errorProperties['description'];
     if (description is String) {
@@ -794,7 +800,7 @@ class XCDevice {
       return const <String>[];
     }
 
-    final List<String> diagnostics = <String>[];
+    final diagnostics = <String>[];
     for (final Object deviceProperties in allAvailableDevices) {
       if (deviceProperties is! Map<String, Object?>) {
         continue;

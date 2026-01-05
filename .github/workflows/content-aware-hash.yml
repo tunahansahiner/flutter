@@ -11,15 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Fetch base commit and origin/master
-        run: |
-          git fetch --no-tags --prune --depth=1 origin ${{ github.event.pull_request.base.sha }}
+        uses: actions/checkout@v5
 
       - name: Generate Hash
         run: |
-          engine_content_hash=$(git ls-tree HEAD DEPS bin/internal/release-candidate-branch.version engine | git hash-object --stdin)
+          # Script updated to handle gh-readonly-queue/ branches
+          engine_content_hash=$(bin/internal/content_aware_hash.sh)
           # test notice annotation for retrival from api
           echo "::notice ::{\"engine_content_hash\": \"${engine_content_hash}\"}"
           # test summary writing

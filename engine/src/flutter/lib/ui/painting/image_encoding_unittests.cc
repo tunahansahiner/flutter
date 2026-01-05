@@ -10,6 +10,7 @@
 #include "flutter/common/task_runners.h"
 #include "flutter/fml/synchronization/waitable_event.h"
 #include "flutter/lib/ui/painting/image.h"
+#include "flutter/lib/ui/snapshot_delegate.h"
 #include "flutter/runtime/dart_vm.h"
 #include "flutter/shell/common/shell_test.h"
 #include "flutter/shell/common/thread_host.h"
@@ -43,7 +44,6 @@ class MockDlImage : public DlImage {
   MOCK_METHOD(bool, isOpaque, (), (const, override));
   MOCK_METHOD(bool, isTextureBacked, (), (const, override));
   MOCK_METHOD(bool, isUIThreadSafe, (), (const, override));
-  MOCK_METHOD(SkISize, dimensions, (), (const, override));
   MOCK_METHOD(DlISize, GetSize, (), (const, override));
   MOCK_METHOD(size_t, GetApproximateByteSize, (), (const, override));
 };
@@ -67,6 +67,47 @@ class MockSyncSwitch {
 
   MOCK_METHOD(void, Execute, (const Handlers& handlers), (const));
   MOCK_METHOD(void, SetSwitch, (bool value));
+};
+
+class MockSnapshotDelegate : public SnapshotDelegate {
+ public:
+  MockSnapshotDelegate() : weak_factory_(this) {}
+
+  MOCK_METHOD(std::unique_ptr<GpuImageResult>,
+              MakeSkiaGpuImage,
+              (sk_sp<DisplayList>, const SkImageInfo&),
+              (override));
+  MOCK_METHOD(std::shared_ptr<TextureRegistry>,
+              GetTextureRegistry,
+              (),
+              (override));
+  MOCK_METHOD(GrDirectContext*, GetGrContext, (), (override));
+  MOCK_METHOD(void,
+              MakeRasterSnapshot,
+              (sk_sp<DisplayList>,
+               DlISize,
+               std::function<void(sk_sp<DlImage>)>),
+              (override));
+  MOCK_METHOD(sk_sp<DlImage>,
+              MakeRasterSnapshotSync,
+              (sk_sp<DisplayList>, DlISize),
+              (override));
+  MOCK_METHOD(sk_sp<SkImage>,
+              ConvertToRasterImage,
+              (sk_sp<SkImage>),
+              (override));
+  MOCK_METHOD(void,
+              CacheRuntimeStage,
+              (const std::shared_ptr<impeller::RuntimeStage>&),
+              (override));
+  MOCK_METHOD(bool, MakeRenderContextCurrent, (), (override));
+
+  fml::TaskRunnerAffineWeakPtr<SnapshotDelegate> GetWeakPtr() {
+    return weak_factory_.GetWeakPtr();
+  }
+
+ private:
+  fml::TaskRunnerAffineWeakPtrFactory<MockSnapshotDelegate> weak_factory_;
 };
 
 TEST_F(ShellTest, EncodeImageGivesExternalTypedData) {
@@ -270,6 +311,7 @@ TEST_F(ShellTest, EncodeImageRetries) {
   AddNativeCallback("ValidateNotNull", CREATE_NATIVE_ENTRY(validate_not_null));
 
   ASSERT_TRUE(shell->IsSetup());
+
   auto configuration = RunConfiguration::InferFromSettings(settings);
   configuration.SetEntrypoint("toByteDataRetries");
 
@@ -318,6 +360,7 @@ TEST_F(ShellTest, EncodeImageRetryOverflows) {
   AddNativeCallback("ValidateNotNull", CREATE_NATIVE_ENTRY(validate_not_null));
 
   ASSERT_TRUE(shell->IsSetup());
+
   auto configuration = RunConfiguration::InferFromSettings(settings);
   configuration.SetEntrypoint("toByteDataRetryOverflows");
 
@@ -465,13 +508,16 @@ TEST_F(ShellTest, EncodeImageFailsWithoutGPUImpeller) {
   AddNativeCallback("TurnOffGPU", CREATE_NATIVE_ENTRY(turn_off_gpu));
 
   auto flush_awaiting_tasks = [&](Dart_NativeArguments args) {
-    task_runners.GetIOTaskRunner()->PostTask([&] {
-      std::shared_ptr<impeller::Context> impeller_context =
-          shell->GetIOManager()->GetImpellerContext();
-      // This will cause the stored tasks to overflow and start throwing them
-      // away.
-      for (int i = 0; i < impeller::Context::kMaxTasksAwaitingGPU; i++) {
-        impeller_context->StoreTaskForGPU([] {}, [] {});
+    fml::WeakPtr io_manager = shell->GetIOManager();
+    task_runners.GetIOTaskRunner()->PostTask([io_manager] {
+      if (io_manager) {
+        std::shared_ptr<impeller::Context> impeller_context =
+            io_manager->GetImpellerContext();
+        // This will cause the stored tasks to overflow and start throwing them
+        // away.
+        for (int i = 0; i < impeller::Context::kMaxTasksAwaitingGPU; i++) {
+          impeller_context->StoreTaskForGPU([] {}, [] {});
+        }
       }
     });
   };
@@ -493,8 +539,8 @@ TEST_F(ShellTest, EncodeImageFailsWithoutGPUImpeller) {
 
 TEST(ImageEncodingImpellerTest, ConvertDlImageToSkImage16Float) {
   sk_sp<MockDlImage> image(new MockDlImage());
-  EXPECT_CALL(*image, dimensions)
-      .WillRepeatedly(Return(SkISize::Make(100, 100)));
+  EXPECT_CALL(*image, GetSize)  //
+      .WillRepeatedly(Return(DlISize(100, 100)));
   impeller::TextureDescriptor desc;
   desc.format = impeller::PixelFormat::kR16G16B16A16Float;
   auto texture = std::make_shared<MockTexture>(desc);
@@ -503,6 +549,9 @@ TEST(ImageEncodingImpellerTest, ConvertDlImageToSkImage16Float) {
   buffer.reserve(100 * 100 * 8);
   auto context = MakeConvertDlImageToSkImageContext(buffer);
   bool did_call = false;
+  MockSnapshotDelegate snapshot_delegate;
+  EXPECT_CALL(snapshot_delegate, MakeRenderContextCurrent)
+      .WillRepeatedly(Return(true));
   ImageEncodingImpeller::ConvertDlImageToSkImage(
       image,
       [&did_call](const fml::StatusOr<sk_sp<SkImage>>& image) {
@@ -514,14 +563,14 @@ TEST(ImageEncodingImpellerTest, ConvertDlImageToSkImage16Float) {
         EXPECT_EQ(kRGBA_F16_SkColorType, image.value()->colorType());
         EXPECT_EQ(nullptr, image.value()->colorSpace());
       },
-      context);
+      snapshot_delegate.GetWeakPtr(), context);
   EXPECT_TRUE(did_call);
 }
 
 TEST(ImageEncodingImpellerTest, ConvertDlImageToSkImage10XR) {
   sk_sp<MockDlImage> image(new MockDlImage());
-  EXPECT_CALL(*image, dimensions)
-      .WillRepeatedly(Return(SkISize::Make(100, 100)));
+  EXPECT_CALL(*image, GetSize)  //
+      .WillRepeatedly(Return(DlISize(100, 100)));
   impeller::TextureDescriptor desc;
   desc.format = impeller::PixelFormat::kB10G10R10XR;
   auto texture = std::make_shared<MockTexture>(desc);
@@ -530,6 +579,9 @@ TEST(ImageEncodingImpellerTest, ConvertDlImageToSkImage10XR) {
   buffer.reserve(100 * 100 * 4);
   auto context = MakeConvertDlImageToSkImageContext(buffer);
   bool did_call = false;
+  MockSnapshotDelegate snapshot_delegate;
+  EXPECT_CALL(snapshot_delegate, MakeRenderContextCurrent)
+      .WillRepeatedly(Return(true));
   ImageEncodingImpeller::ConvertDlImageToSkImage(
       image,
       [&did_call](const fml::StatusOr<sk_sp<SkImage>>& image) {
@@ -541,7 +593,7 @@ TEST(ImageEncodingImpellerTest, ConvertDlImageToSkImage10XR) {
         EXPECT_EQ(kBGR_101010x_XR_SkColorType, image.value()->colorType());
         EXPECT_EQ(nullptr, image.value()->colorSpace());
       },
-      context);
+      snapshot_delegate.GetWeakPtr(), context);
   EXPECT_TRUE(did_call);
 }
 
